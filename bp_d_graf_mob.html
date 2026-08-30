@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
+  <title>Duna Grafikon Mobil</title>
+
+  <!--
+    Ugyanaz a mukodesi elv, mint a bp_d_graf.html-ben (lasd ott a reszletes
+    magyarazatot) - ez csak a kis kepernyore optimalizalt valtozat: nagyobb
+    gombok, kevesebb hely-pazarlas, "sticky" (mindig lathato) fejlec.
+  -->
+
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #f6f7f8;
+      color: #111;
+      font-family: -apple-system, Arial, sans-serif;
+    }
+    .top {
+      padding: 12px;
+      background: #111;
+      color: #fff;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .top span {
+      font-size: 13px;
+      letter-spacing: 1px;
+    }
+    .top a {
+      color: #fff;
+      text-decoration: none;
+      font-size: 13px;
+      border: 1px solid #444;
+      padding: 7px 12px;
+      border-radius: 20px;
+    }
+    .wrap {
+      padding: 10px;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    .card {
+      background: #fff;
+      border-radius: 18px;
+      padding: 12px;
+      box-shadow: 0 4px 18px rgba(0,0,0,0.08);
+    }
+    #chart-box {
+      width: 100%;
+      height: 68vh;
+      min-height: 400px;
+    }
+    .info {
+      font-size: 13px;
+      color: #666;
+      text-align: center;
+      margin: 8px 0;
+    }
+    .hint {
+      font-size: 11px;
+      color: #888;
+      text-align: center;
+      margin-top: 6px;
+    }
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 14px;
+      background: #111;
+      color: #fff;
+      text-decoration: none;
+      border-radius: 12px;
+      font-weight: 700;
+      text-align: center;
+      margin-top: 10px;
+      font-size: 15px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="top">
+    <span>TELJES ADATBÁZIS</span>
+    <a href="bp_d_graf.html">Asztali</a>
+  </div>
+
+  <div class="wrap">
+    <div class="card">
+      <div id="chart-box">
+        <canvas id="chart"></canvas>
+      </div>
+    </div>
+    <div class="info" id="info">Adatok betöltése...</div>
+    <a class="btn" href="index.html">&larr; Vissza a mobil kijelzőre</a>
+    <div class="hint">Az adatok automatikusan frissülnek minden újratöltéskor.</div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    // Lasd a reszletes magyarazatot a bp_d_graf.html fajlban - ez pontosan
+    // ugyanaz a betoltesi/rajzolasi logika, csak mas a HTML/CSS korulotte.
+    const adatUrl = "bp_d_adat.txt?t=" + Date.now();
+
+    fetch(adatUrl)
+      .then(function (valasz) {
+        if (!valasz.ok) {
+          throw new Error("A bp_d_adat.txt nem erheto el (HTTP " + valasz.status + ")");
+        }
+        return valasz.text();
+      })
+      .then(function (szoveg) {
+        const sorok = szoveg.split("\n").map(function (s) { return s.trim(); }).filter(Boolean);
+
+        const cimkek = [];
+        const budapest = [];
+        const paks = [];
+
+        sorok.forEach(function (sor) {
+          const reszek = sor.split(";");
+          if (reszek.length < 3) return;
+
+          const idopont = reszek[0].trim();
+          const bp = reszek[1].trim();
+          const pk = reszek[2].trim();
+
+          cimkek.push(idopont);
+          budapest.push(bp === "NA" || bp === "" ? null : Number(bp));
+          paks.push(pk === "NA" || pk === "" ? null : Number(pk));
+        });
+
+        document.getElementById("info").textContent =
+          "Órák száma: " + cimkek.length +
+          (cimkek.length > 0 ? " | Legfrissebb: " + cimkek[cimkek.length - 1] : "");
+
+        const ctx = document.getElementById("chart").getContext("2d");
+
+        new Chart(ctx, {
+          type: "line",
+          data: {
+            labels: cimkek,
+            datasets: [
+              {
+                label: "Budapest (cm)",
+                data: budapest,
+                borderColor: "#1565c0",
+                backgroundColor: "transparent",
+                borderWidth: 2,
+                pointRadius: 0,
+                spanGaps: false,
+                tension: 0.1
+              },
+              {
+                label: "Paks (cm)",
+                data: paks,
+                borderColor: "#c62828",
+                backgroundColor: "transparent",
+                borderWidth: 2,
+                pointRadius: 0,
+                spanGaps: false,
+                tension: 0.1
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: "index", intersect: false },
+            scales: {
+              x: { ticks: { maxTicksLimit: 8, autoSkip: true } },
+              y: { title: { display: true, text: "cm" } }
+            },
+            plugins: {
+              legend: { position: "top" }
+            }
+          }
+        });
+      })
+      .catch(function (hiba) {
+        document.getElementById("info").textContent =
+          "Hiba történt az adatok betöltésekor: " + hiba.message;
+      });
+  </script>
+</body>
+</html>
