@@ -2,14 +2,8 @@
 <html lang="hu">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <title>Duna Grafikon Mobil</title>
-
-  <!--
-    Ugyanaz a mukodesi elv, mint a bp_d_graf.html-ben (lasd ott a reszletes
-    magyarazatot) - ez csak a kis kepernyore optimalizalt valtozat: nagyobb
-    gombok, kevesebb hely-pazarlas, "sticky" (mindig lathato) fejlec.
-  -->
 
   <style>
     * { box-sizing: border-box; }
@@ -31,10 +25,7 @@
       top: 0;
       z-index: 10;
     }
-    .top span {
-      font-size: 13px;
-      letter-spacing: 1px;
-    }
+    .top span { font-size: 13px; letter-spacing: 1px; }
     .top a {
       color: #fff;
       text-decoration: none;
@@ -43,34 +34,62 @@
       padding: 7px 12px;
       border-radius: 20px;
     }
-    .wrap {
-      padding: 10px;
-      max-width: 600px;
-      margin: 0 auto;
-    }
+    .wrap { padding: 10px; max-width: 600px; margin: 0 auto; }
     .card {
       background: #fff;
       border-radius: 18px;
       padding: 12px;
       box-shadow: 0 4px 18px rgba(0,0,0,0.08);
+      margin-bottom: 10px;
     }
-    #chart-box {
-      width: 100%;
-      height: 68vh;
-      min-height: 400px;
-    }
-    .info {
-      font-size: 13px;
-      color: #666;
-      text-align: center;
-      margin: 8px 0;
-    }
-    .hint {
+
+    .valaszto-cim {
       font-size: 11px;
       color: #888;
-      text-align: center;
-      margin-top: 6px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin: 2px 0 6px;
     }
+    .valasztosor {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+    .valasztosor:last-child { margin-bottom: 0; }
+    .valasztosor button {
+      flex: 1 1 auto;
+      padding: 9px 8px;
+      font-size: 12.5px;
+      border: 1px solid #ccc;
+      background: #fff;
+      color: #333;
+      border-radius: 10px;
+      font-weight: 600;
+    }
+    .valasztosor button.aktiv {
+      background: #111;
+      color: #fff;
+      border-color: #111;
+    }
+    .valasztosor button.letiltva {
+      opacity: 0.35;
+    }
+
+    #chart-box { width: 100%; height: 60vh; min-height: 380px; position: relative; }
+
+    .panel-cim {
+      font-size: 12px;
+      font-weight: 700;
+      color: #555;
+      margin: 4px 0 4px;
+      text-align: center;
+    }
+    .panel-box { width: 100%; height: 28vh; min-height: 190px; position: relative; margin-bottom: 4px; }
+
+    .info { font-size: 13px; color: #666; text-align: center; margin: 8px 0; }
+    .hint { font-size: 11px; color: #888; text-align: center; margin-top: 6px; }
+
     .btn {
       display: block;
       width: 100%;
@@ -83,6 +102,19 @@
       text-align: center;
       margin-top: 10px;
       font-size: 15px;
+      border: none;
+    }
+    .btn-halvany {
+      display: block;
+      width: 100%;
+      padding: 10px;
+      background: #fff;
+      color: #111;
+      border: 2px solid #111;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 13px;
+      margin-top: 6px;
     }
   </style>
 </head>
@@ -94,20 +126,55 @@
   </div>
 
   <div class="wrap">
+
     <div class="card">
+      <div class="valaszto-cim">Időszak</div>
+      <div class="valasztosor" id="idoszak-gombok"></div>
+
+      <div class="valaszto-cim">Bontás</div>
+      <div class="valasztosor" id="bontas-gombok"></div>
+
+      <div class="valaszto-cim">Nézet (csak min-max bontásnál)</div>
+      <div class="valasztosor" id="nezet-gombok"></div>
+    </div>
+
+    <!-- EGY GRAFIKON NEZET (nyers oranankenti, vagy "egy grafikon" nezet) -->
+    <div class="card" id="chart-box-egy">
       <div id="chart-box">
         <canvas id="chart"></canvas>
       </div>
     </div>
+
+    <!-- KET PANEL NEZET: kulon skala a max es kulon skala a min ertekeknek,
+         igy egy kicsi, de valos ingadozas (pl. 61 -> 6 cm) is jol lathato
+         marad, nem nyomodik ossze egy kozos, nagy (0-1000) skalahoz kepest. -->
+    <div class="card" id="chart-box-ketto" style="display:none;">
+      <div class="panel-cim">Maximum értékek</div>
+      <div class="panel-box"><canvas id="chart-max"></canvas></div>
+      <div class="panel-cim">Minimum értékek</div>
+      <div class="panel-box"><canvas id="chart-min"></canvas></div>
+    </div>
+
     <div class="info" id="info">Adatok betöltése...</div>
+    <button class="btn-halvany" onclick="nagyitasVisszaallitas();">Nagyítás visszaállítása</button>
     <a class="btn" href="index.html">&larr; Vissza a mobil kijelzőre</a>
-    <div class="hint">Az adatok automatikusan frissülnek minden újratöltéskor.</div>
+    <div class="hint">Csippents/húzz a grafikonon a nagyításhoz. Az adatok minden újratöltéskor frissülnek.</div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
   <script>
-    // Lasd a reszletes magyarazatot a bp_d_graf.html fajlban - ez pontosan
-    // ugyanaz a betoltesi/rajzolasi logika, csak mas a HTML/CSS korulotte.
+    // ==================================================================
+    // 1. ADATOK BETOLTESE ES FELDOLGOZASA
+    // ==================================================================
+
+    let osszesCimke = [];
+    let osszesBudapest = [];
+    let osszesPaks = [];
+    let chart = null;      // "egy grafikon" nezet
+    let chartMax = null;   // "ket panel" nezet - felso (max)
+    let chartMin = null;   // "ket panel" nezet - also (min)
+
     const adatUrl = "bp_d_adat.txt?t=" + Date.now();
 
     fetch(adatUrl)
@@ -120,10 +187,6 @@
       .then(function (szoveg) {
         const sorok = szoveg.split("\n").map(function (s) { return s.trim(); }).filter(Boolean);
 
-        const cimkek = [];
-        const budapest = [];
-        const paks = [];
-
         sorok.forEach(function (sor) {
           const reszek = sor.split(";");
           if (reszek.length < 3) return;
@@ -132,62 +195,350 @@
           const bp = reszek[1].trim();
           const pk = reszek[2].trim();
 
-          cimkek.push(idopont);
-          budapest.push(bp === "NA" || bp === "" ? null : Number(bp));
-          paks.push(pk === "NA" || pk === "" ? null : Number(pk));
+          osszesCimke.push(idopont);
+          osszesBudapest.push(bp === "NA" || bp === "" ? null : Number(bp));
+          osszesPaks.push(pk === "NA" || pk === "" ? null : Number(pk));
         });
 
-        document.getElementById("info").textContent =
-          "Órák száma: " + cimkek.length +
-          (cimkek.length > 0 ? " | Legfrissebb: " + cimkek[cimkek.length - 1] : "");
-
-        const ctx = document.getElementById("chart").getContext("2d");
-
-        new Chart(ctx, {
-          type: "line",
-          data: {
-            labels: cimkek,
-            datasets: [
-              {
-                label: "Budapest (cm)",
-                data: budapest,
-                borderColor: "#1565c0",
-                backgroundColor: "transparent",
-                borderWidth: 2,
-                pointRadius: 0,
-                spanGaps: false,
-                tension: 0.1
-              },
-              {
-                label: "Paks (cm)",
-                data: paks,
-                borderColor: "#c62828",
-                backgroundColor: "transparent",
-                borderWidth: 2,
-                pointRadius: 0,
-                spanGaps: false,
-                tension: 0.1
-              }
-            ]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: { mode: "index", intersect: false },
-            scales: {
-              x: { ticks: { maxTicksLimit: 8, autoSkip: true } },
-              y: { title: { display: true, text: "cm" } }
-            },
-            plugins: {
-              legend: { position: "top" }
-            }
-          }
-        });
+        gombokFelepitese();
+        chartFelepites();
       })
       .catch(function (hiba) {
         document.getElementById("info").textContent =
           "Hiba történt az adatok betöltésekor: " + hiba.message;
       });
+
+
+    // ==================================================================
+    // 2. IDOSZAK-SZURES
+    // ==================================================================
+
+    const IDOSZAKOK = [
+      { kulcs: "1d",  felirat: "24 óra", orak: 24 },
+      { kulcs: "7d",  felirat: "7 nap",  orak: 24 * 7 },
+      { kulcs: "30d", felirat: "30 nap", orak: 24 * 30 },
+      { kulcs: "1y",  felirat: "1 év",   orak: 24 * 365 },
+      { kulcs: "all", felirat: "Teljes", orak: null }
+    ];
+    let aktivIdoszak = "7d";
+
+    function idoszakSzures() {
+      const idoszak = IDOSZAKOK.find(function (i) { return i.kulcs === aktivIdoszak; });
+      if (!idoszak || idoszak.orak === null) {
+        return { cimkek: osszesCimke, budapest: osszesBudapest, paks: osszesPaks };
+      }
+      const n = osszesCimke.length;
+      const db = Math.min(n, idoszak.orak);
+      const kezdet = n - db;
+      return {
+        cimkek: osszesCimke.slice(kezdet),
+        budapest: osszesBudapest.slice(kezdet),
+        paks: osszesPaks.slice(kezdet)
+      };
+    }
+
+
+    // ==================================================================
+    // 3. BONTAS (aggregalas): napi / heti / havi / eves min-max
+    // ==================================================================
+
+    const BONTASOK = [
+      { kulcs: "nyers", felirat: "Óránkénti (nyers)" },
+      { kulcs: "napi",  felirat: "Napi min-max" },
+      { kulcs: "heti",  felirat: "Heti min-max" },
+      { kulcs: "havi",  felirat: "Havi min-max" },
+      { kulcs: "eves",  felirat: "Éves min-max" }
+    ];
+    let aktivBontas = "nyers";
+
+    // "Nezet" csak akkor szamit, ha van min/max (tehat nem nyers bontasnal).
+    const NEZETEK = [
+      { kulcs: "egy",   felirat: "Egy grafikon" },
+      { kulcs: "ketto", felirat: "Két panel (max / min külön)" }
+    ];
+    let aktivNezet = "egy";
+
+    function p2(n) { return String(n).padStart(2, "0"); }
+
+    function idopontFeldolgozas(cimke) {
+      const m = cimke.match(/^(\d{4})\.(\d{2})\.(\d{2})\.\s+(\d{2}):(\d{2})$/);
+      if (!m) return null;
+      return { y: +m[1], mo: +m[2], d: +m[3], h: +m[4], mi: +m[5] };
+    }
+
+    function hetKezdeteKulcs(y, mo, d) {
+      const datum = new Date(y, mo - 1, d);
+      const nap = datum.getDay();
+      const eltolas = (nap === 0) ? -6 : (1 - nap);
+      datum.setDate(datum.getDate() + eltolas);
+      return datum.getFullYear() + "." + p2(datum.getMonth() + 1) + "." + p2(datum.getDate()) + ".";
+    }
+
+    function csoportKulcs(info, bontas) {
+      if (bontas === "napi") return info.y + "." + p2(info.mo) + "." + p2(info.d) + ".";
+      if (bontas === "heti") return hetKezdeteKulcs(info.y, info.mo, info.d);
+      if (bontas === "havi") return info.y + "." + p2(info.mo) + ".";
+      if (bontas === "eves") return String(info.y);
+      return null;
+    }
+
+    function aggregalasMinMax(cimkek, budapest, paks, bontas) {
+      const sorrend = [];
+      const terkep = new Map();
+
+      cimkek.forEach(function (cimke, i) {
+        const info = idopontFeldolgozas(cimke);
+        if (!info) return;
+        const kulcs = csoportKulcs(info, bontas);
+
+        if (!terkep.has(kulcs)) {
+          terkep.set(kulcs, { bpMin: null, bpMax: null, pkMin: null, pkMax: null });
+          sorrend.push(kulcs);
+        }
+        const g = terkep.get(kulcs);
+        const bp = budapest[i];
+        const pk = paks[i];
+
+        if (bp !== null && bp !== undefined) {
+          g.bpMin = (g.bpMin === null) ? bp : Math.min(g.bpMin, bp);
+          g.bpMax = (g.bpMax === null) ? bp : Math.max(g.bpMax, bp);
+        }
+        if (pk !== null && pk !== undefined) {
+          g.pkMin = (g.pkMin === null) ? pk : Math.min(g.pkMin, pk);
+          g.pkMax = (g.pkMax === null) ? pk : Math.max(g.pkMax, pk);
+        }
+      });
+
+      return {
+        cimkek: sorrend,
+        bpMin: sorrend.map(function (k) { return terkep.get(k).bpMin; }),
+        bpMax: sorrend.map(function (k) { return terkep.get(k).bpMax; }),
+        pkMin: sorrend.map(function (k) { return terkep.get(k).pkMin; }),
+        pkMax: sorrend.map(function (k) { return terkep.get(k).pkMax; })
+      };
+    }
+
+
+    // ==================================================================
+    // 4. GOMBOK FELEPITESE ES KEZELESE
+    // ==================================================================
+
+    function gombokFelepitese() {
+      const idoszakDiv = document.getElementById("idoszak-gombok");
+      idoszakDiv.innerHTML = "";
+      IDOSZAKOK.forEach(function (i) {
+        const gomb = document.createElement("button");
+        gomb.textContent = i.felirat;
+        gomb.dataset.kulcs = i.kulcs;
+        gomb.onclick = function () { idoszakValasztas(i.kulcs); };
+        idoszakDiv.appendChild(gomb);
+      });
+
+      const bontasDiv = document.getElementById("bontas-gombok");
+      bontasDiv.innerHTML = "";
+      BONTASOK.forEach(function (b) {
+        const gomb = document.createElement("button");
+        gomb.textContent = b.felirat;
+        gomb.dataset.kulcs = b.kulcs;
+        gomb.onclick = function () { bontasValasztas(b.kulcs); };
+        bontasDiv.appendChild(gomb);
+      });
+
+      const nezetDiv = document.getElementById("nezet-gombok");
+      nezetDiv.innerHTML = "";
+      NEZETEK.forEach(function (nz) {
+        const gomb = document.createElement("button");
+        gomb.textContent = nz.felirat;
+        gomb.dataset.kulcs = nz.kulcs;
+        gomb.onclick = function () { nezetValasztas(nz.kulcs); };
+        nezetDiv.appendChild(gomb);
+      });
+
+      gombokFrissitese();
+    }
+
+    function gombokFrissitese() {
+      document.querySelectorAll("#idoszak-gombok button").forEach(function (btn) {
+        btn.classList.toggle("aktiv", btn.dataset.kulcs === aktivIdoszak);
+      });
+      document.querySelectorAll("#bontas-gombok button").forEach(function (btn) {
+        btn.classList.toggle("aktiv", btn.dataset.kulcs === aktivBontas);
+      });
+      const nyersE = (aktivBontas === "nyers");
+      document.querySelectorAll("#nezet-gombok button").forEach(function (btn) {
+        btn.classList.toggle("aktiv", btn.dataset.kulcs === aktivNezet && !nyersE);
+        btn.classList.toggle("letiltva", nyersE);
+      });
+    }
+
+    function idoszakValasztas(kulcs) {
+      aktivIdoszak = kulcs;
+      gombokFrissitese();
+      chartFelepites();
+    }
+
+    function bontasValasztas(kulcs) {
+      aktivBontas = kulcs;
+      if (kulcs === "nyers" && (aktivIdoszak === "all" || aktivIdoszak === "1y")) {
+        aktivIdoszak = "7d";
+      } else if (kulcs !== "nyers" && (aktivIdoszak === "1d" || aktivIdoszak === "7d")) {
+        aktivIdoszak = "all";
+      }
+      gombokFrissitese();
+      chartFelepites();
+    }
+
+    function nezetValasztas(kulcs) {
+      if (aktivBontas === "nyers") return;
+      aktivNezet = kulcs;
+      gombokFrissitese();
+      chartFelepites();
+    }
+
+    function nagyitasVisszaallitas() {
+      if (chart) chart.resetZoom();
+      if (chartMax) chartMax.resetZoom();
+      if (chartMin) chartMin.resetZoom();
+    }
+
+
+    // ==================================================================
+    // 5. A GRAFIKON(OK) FELEPITESE
+    // ==================================================================
+
+    function alapZoomBeallitas() {
+      return {
+        pan: { enabled: true, mode: "x" },
+        zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: "x" }
+      };
+    }
+
+    function chartFelepites() {
+      const szurt = idoszakSzures();
+      const ketPanel = (aktivBontas !== "nyers" && aktivNezet === "ketto");
+
+      document.getElementById("chart-box-egy").style.display = ketPanel ? "none" : "block";
+      document.getElementById("chart-box-ketto").style.display = ketPanel ? "block" : "none";
+
+      if (ketPanel) {
+        egyChartLeallitasa();
+        ketPanelRajzolasa(szurt);
+      } else {
+        ketPanelLeallitasa();
+        egyGrafikonRajzolasa(szurt);
+      }
+    }
+
+    function egyChartLeallitasa() {
+      if (chart) { chart.destroy(); chart = null; }
+    }
+    function ketPanelLeallitasa() {
+      if (chartMax) { chartMax.destroy(); chartMax = null; }
+      if (chartMin) { chartMin.destroy(); chartMin = null; }
+    }
+
+    function egyGrafikonRajzolasa(szurt) {
+      let cimkek, datasets;
+
+      if (aktivBontas === "nyers") {
+        cimkek = szurt.cimkek;
+        datasets = [
+          { label: "Budapest (cm)", data: szurt.budapest, borderColor: "#1565c0", backgroundColor: "transparent", borderWidth: 2, pointRadius: 0, spanGaps: false, tension: 0.1 },
+          { label: "Paks (cm)", data: szurt.paks, borderColor: "#c62828", backgroundColor: "transparent", borderWidth: 2, pointRadius: 0, spanGaps: false, tension: 0.1 }
+        ];
+      } else {
+        const agg = aggregalasMinMax(szurt.cimkek, szurt.budapest, szurt.paks, aktivBontas);
+        cimkek = agg.cimkek;
+        datasets = [
+          { label: "Budapest max", data: agg.bpMax, borderColor: "#1565c0", backgroundColor: "transparent", borderWidth: 2, pointRadius: 0, spanGaps: true, tension: 0.1 },
+          { label: "Budapest min", data: agg.bpMin, borderColor: "#1565c0", backgroundColor: "transparent", borderWidth: 2, borderDash: [6, 4], pointRadius: 0, spanGaps: true, tension: 0.1 },
+          { label: "Paks max", data: agg.pkMax, borderColor: "#c62828", backgroundColor: "transparent", borderWidth: 2, pointRadius: 0, spanGaps: true, tension: 0.1 },
+          { label: "Paks min", data: agg.pkMin, borderColor: "#c62828", backgroundColor: "transparent", borderWidth: 2, borderDash: [6, 4], pointRadius: 0, spanGaps: true, tension: 0.1 }
+        ];
+      }
+
+      egyChartLeallitasa();
+      const ctx = document.getElementById("chart").getContext("2d");
+      chart = new Chart(ctx, {
+        type: "line",
+        data: { labels: cimkek, datasets: datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: "index", intersect: false },
+          scales: {
+            x: { ticks: { maxTicksLimit: 7, autoSkip: true } },
+            y: { title: { display: true, text: "cm" } }
+          },
+          plugins: {
+            legend: { position: "top", labels: { boxWidth: 14, font: { size: 11 } } },
+            zoom: alapZoomBeallitas()
+          }
+        }
+      });
+
+      document.getElementById("info").textContent =
+        "Pontok száma: " + cimkek.length + (cimkek.length > 0 ? " | Legfrissebb: " + cimkek[cimkek.length - 1] : "");
+    }
+
+    function ketPanelRajzolasa(szurt) {
+      const agg = aggregalasMinMax(szurt.cimkek, szurt.budapest, szurt.paks, aktivBontas);
+
+      ketPanelLeallitasa();
+
+      const ctxMax = document.getElementById("chart-max").getContext("2d");
+      chartMax = new Chart(ctxMax, {
+        type: "line",
+        data: {
+          labels: agg.cimkek,
+          datasets: [
+            { label: "Budapest max", data: agg.bpMax, borderColor: "#1565c0", backgroundColor: "transparent", borderWidth: 2, pointRadius: 0, spanGaps: true, tension: 0.1 },
+            { label: "Paks max", data: agg.pkMax, borderColor: "#c62828", backgroundColor: "transparent", borderWidth: 2, pointRadius: 0, spanGaps: true, tension: 0.1 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: "index", intersect: false },
+          scales: {
+            x: { ticks: { maxTicksLimit: 6, autoSkip: true } },
+            y: { title: { display: true, text: "cm" } }
+          },
+          plugins: {
+            legend: { position: "top", labels: { boxWidth: 12, font: { size: 10 } } },
+            zoom: alapZoomBeallitas()
+          }
+        }
+      });
+
+      const ctxMin = document.getElementById("chart-min").getContext("2d");
+      chartMin = new Chart(ctxMin, {
+        type: "line",
+        data: {
+          labels: agg.cimkek,
+          datasets: [
+            { label: "Budapest min", data: agg.bpMin, borderColor: "#1565c0", backgroundColor: "transparent", borderWidth: 2, pointRadius: 0, spanGaps: true, tension: 0.1 },
+            { label: "Paks min", data: agg.pkMin, borderColor: "#c62828", backgroundColor: "transparent", borderWidth: 2, pointRadius: 0, spanGaps: true, tension: 0.1 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: "index", intersect: false },
+          scales: {
+            x: { ticks: { maxTicksLimit: 6, autoSkip: true } },
+            y: { title: { display: true, text: "cm" } }
+          },
+          plugins: {
+            legend: { position: "top", labels: { boxWidth: 12, font: { size: 10 } } },
+            zoom: alapZoomBeallitas()
+          }
+        }
+      });
+
+      document.getElementById("info").textContent =
+        "Pontok száma: " + agg.cimkek.length + (agg.cimkek.length > 0 ? " | Legfrissebb: " + agg.cimkek[agg.cimkek.length - 1] : "");
+    }
   </script>
 </body>
 </html>
