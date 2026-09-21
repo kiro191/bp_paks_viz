@@ -10,7 +10,7 @@ export async function onRequest(context) {
   const originalHtml = await response.text();
 
   const counterImg = `
-    <img src="https://bp-paks-counter.kiro111111111.workers.dev/json?path=/58914791"
+    <img src="https://bp-paks-counter.kiro1111111.workers.dev/json?path=/58914791"
          alt=""
          width="1"
          height="1"
