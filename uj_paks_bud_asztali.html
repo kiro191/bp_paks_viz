@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang='hu'>
+<head>
+  <meta charset='UTF-8'>
+  <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+  <title>Budapest, Paks vízállásai</title>
+  <style>
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      min-height: 100%;
+    }
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      background: #fff;
+      color: #111;
+      text-align: center;
+    }
+    .container {
+      width: 100%;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 30px 20px 40px;
+      box-sizing: border-box;
+    }
+    .page-title {
+      font-size: 28px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      margin-bottom: 10px;
+    }
+    .nav-link {
+      font-size: 14px;
+      margin-bottom: 30px;
+    }
+    .nav-link a {
+      color: #555;
+      text-decoration: none;
+      border-bottom: 1px solid #ccc;
+    }
+    .station-block {
+      margin-bottom: 45px;
+    }
+    .city {
+      font-size: 28px;
+      font-weight: 600;
+      letter-spacing: 4px;
+      margin-bottom: 5px;
+    }
+    .river {
+      font-size: 22px;
+      letter-spacing: 3px;
+      margin-bottom: 12px;
+    }
+    .station {
+      font-size: 16px;
+      color: #666;
+      margin-bottom: 25px;
+    }
+    .water {
+      font-size: 100px;
+      font-weight: 700;
+      line-height: 1;
+    }
+    .unit {
+      font-size: 30px;
+      margin-top: 5px;
+      margin-bottom: 25px;
+    }
+    .time {
+      font-size: 18px;
+      color: #555;
+    }
+    .source {
+      margin-top: 35px;
+      font-size: 13px;
+      color: #888;
+    }
+    .separator {
+      border: 0;
+      border-top: 1px solid #ddd;
+      margin: 10px 0 45px;
+    }
+    .chart-button {
+      display: inline-block;
+      margin: 0 auto 45px;
+      padding: 15px 55px;
+      background: #111;
+      color: #fff;
+      text-decoration: none;
+      font-size: 20px;
+      font-weight: 600;
+      border-radius: 8px;
+    }
+    .chart-button:hover {
+      opacity: .8;
+    }
+    .delta-block .water {
+      color: #b71c1c;
+    }
+    @media (max-width: 420px) {
+      .page-title { font-size: 24px; }
+      .water { font-size: 90px; }
+      .city { font-size: 25px; }
+    }
+  </style>
+</head>
+<body>
+  <div class='container'>
+    <div class='page-title'>Budapest, Paks vízállásai</div>
+    <div class='nav-link'><a href='index.html'>Mobil nézet</a></div>
+
+    <div class='station-block '>
+      <div class='city'>BUDAPEST</div>
+      <div class='river'>DUNA</div>
+      <div class='station'>1646,5 fkm &middot; vízmérce 1026</div>
+      <div class='water'>82</div>
+      <div class='unit'>cm</div>
+      <div class='time'>2026.11.20. 19:00</div>
+    </div>
+
+    <hr class='separator'>
+    <a class='chart-button' href='uj_paks_bud_graf.html'>Grafikon</a>
+
+    <div class='station-block '>
+      <div class='city'>PAKS</div>
+      <div class='river'>DUNA</div>
+      <div class='station'>1531,3 fkm &middot; vízmérce 549</div>
+      <div class='water'>-58</div>
+      <div class='unit'>cm</div>
+      <div class='time'>2026.11.20. 19:00</div>
+    </div>
+
+    <hr class='separator'>
+    <div class='station-block '>
+      <div class='city'>PAKS KÜSZÖB</div>
+      <div class='river'>FELVÍZ</div>
+      <div class='station'>1526,6 fkm</div>
+      <div class='water'>-50</div>
+      <div class='unit'>cm</div>
+      <div class='time'>2026.11.20. 19:00</div>
+    </div>
+
+    <div class='station-block '>
+      <div class='city'>PAKS KÜSZÖB</div>
+      <div class='river'>ALVÍZ</div>
+      <div class='station'>1526,4 fkm</div>
+      <div class='water'>-72</div>
+      <div class='unit'>cm</div>
+      <div class='time'>2026.11.20. 19:00</div>
+    </div>
+
+    <div class='station-block delta-block'>
+      <div class='city'>DELTA</div>
+      <div class='river'>FELVÍZ &minus; ALVÍZ</div>
+      <div class='station'>Paks küszöb vízszintkülönbség</div>
+      <div class='water'>+22</div>
+      <div class='unit'>cm</div>
+      <div class='time'>2026.11.20. 19:00</div>
+    </div>
+
+    <div class='source'>Forrás: Vízügyi honlap</div>
+  </div>
+</body>
+</html>
