@@ -1,8 +1,11 @@
-<!-- ver1 -->
-<!-- FAJLNEV: uj_paks_bud_graf_ver1.html (feltoltes elott a "_ver1" resz torlendo) -->
-<!-- ver1 (2026.11.20.): a bp_d_graf.html alapjan. UJ: Paks kuszob felviz + alviz
-     sorozat, valamint kulon DELTA (felviz - alviz) grafikon. Az adatokat az
-     uj_paks_bud_adat.txt-bol olvassa (6 oszlop). -->
+<!-- ver2 -->
+<!-- FAJLNEV: uj_paks_bud_graf_ver2.html (feltoltes elott a "_ver2" resz torlendo) -->
+<!-- ver2 (2026.11.21.): KET adatfajlbol olvas: az orankenti (Budapest, Paks:
+     uj_paks_bud_adat.txt) es a 15 perces (paksi merok + delta:
+     uj_paks_bud_15p_adat.txt). A fo grafikonon az "Allomasok" valaszto dönti el,
+     melyik adathalmaz latszik; a delta mindig a 15 perces adatbol kulon
+     grafikonon.
+     ver1 (2026.11.20.): a bp_d_graf.html alapjan; felviz/alviz + delta. -->
 <!DOCTYPE html>
 <html lang="hu">
 <head>
@@ -184,7 +187,7 @@
     <button class="reset-btn" onclick="nagyitasVisszaallitas();">Nagyítás visszaállítása</button>
 
     <div class="info" id="info">Adatok betöltése...</div>
-    <div class="hint">Egérgörgővel nagyíthatsz / húzva eltolhatod a grafikont. A jelmagyarázatra kattintva egy-egy vonal elrejthető. Az adatok minden oldal-újratöltéskor frissülnek.</div>
+    <div class="hint">Egérgörgővel nagyíthatsz / húzva eltolhatod a grafikont. A jelmagyarázatra kattintva egy-egy vonal elrejthető. A „Budapest + Paks” nézet óránkénti, a paksi mérők nézetei 15 perces adatot mutatnak (a 15 perces történet most kezd gyűlni). Az adatok minden oldal-újratöltéskor frissülnek.</div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -197,79 +200,87 @@
     // MOBIL = false -> az asztali grafikon
     const MOBIL = false;
 
-    // Az adatfajl neve (a "_verX" resz nelkul - azt feltoltes elott torlod).
-    // Oszlopok: idopont ; Budapest ; Paks ; PaksFelviz ; PaksAlviz ; PaksDelta
-    const ADATFAJL = "uj_paks_bud_adat.txt";
+    // KET ADATHALMAZ van, kulonbozo felbontassal. Az adatfajlok nevei a
+    // "_verX" resz nelkul vannak (azt feltoltes elott torlod).
+    //   "oras": Budapest + Paks, ORANKENTI (hosszu tortenet, 1901-tol)
+    //   "p15" : paksi merok, 15 PERCES (a tortenet most kezd gyulni)
+    // lepesPerc: ket meres kozti ido percben - ebbol szamoljuk, hogy
+    // pl. 24 ora hany sor. oszlopok: kulcs -> oszlopindex a fajlban (0 = idopont).
+    const ADATHALMAZOK = [
+      { kulcs: "oras", fajl: "uj_paks_bud_adat.txt", lepesPerc: 60,
+        oszlopok: { bp: 1, pk: 2 } },
+      { kulcs: "p15", fajl: "uj_paks_bud_15p_adat.txt", lepesPerc: 15,
+        oszlopok: { pk15: 1, cs: 2, fv: 3, av: 4, dl: 5 } }
+    ];
 
-    // A SOROZATOK listaja: a "oszlop" az adatfajl oszlopa (0 = idopont).
-    // Uj sorozat felvetele = 1 sor ide + az adatfajlban az oszlop.
+    // A SOROZATOK: melyik adathalmazhoz tartoznak, felirat, szin.
     const SOROZATOK = [
-      { kulcs: "bp", felirat: "Budapest",           oszlop: 1, szin: "#1565c0" },
-      { kulcs: "pk", felirat: "Paks",               oszlop: 2, szin: "#c62828" },
-      { kulcs: "fv", felirat: "Paks küszöb felvíz", oszlop: 3, szin: "#2e7d32" },
-      { kulcs: "av", felirat: "Paks küszöb alvíz",  oszlop: 4, szin: "#ef6c00" },
-      { kulcs: "dl", felirat: "Delta (felvíz − alvíz)", oszlop: 5, szin: "#6a1b9a" }
+      { kulcs: "bp",   halmaz: "oras", felirat: "Budapest",               szin: "#1565c0" },
+      { kulcs: "pk",   halmaz: "oras", felirat: "Paks (óránkénti)",       szin: "#c62828" },
+      { kulcs: "pk15", halmaz: "p15",  felirat: "Paks",                   szin: "#c62828" },
+      { kulcs: "cs",   halmaz: "p15",  felirat: "Paks hűtővíz csatorna",  szin: "#00838f" },
+      { kulcs: "fv",   halmaz: "p15",  felirat: "Paks küszöb felvíz",     szin: "#2e7d32" },
+      { kulcs: "av",   halmaz: "p15",  felirat: "Paks küszöb alvíz",      szin: "#ef6c00" },
+      { kulcs: "dl",   halmaz: "p15",  felirat: "Delta (felvíz − alvíz)", szin: "#6a1b9a" }
     ];
 
     // Melyik sorozatok latszanak a FO grafikonon (a delta kulon grafikon).
-    // Azert van csoportositas, mert a Budapest/Paks es a kuszob ertekei
-    // nagysagrendileg mas skalan lehetnek - egy kozos tengelyen az egyik
-    // csoport lapos vonalnak latszana.
+    // Egy csoport sorozatai MIND UGYANABBOL az adathalmazbol valok (kulonbozo
+    // felbontasu adatot nem lehet egy idotengelyen keverni).
     const ALLOMASCSOPORTOK = [
-      { kulcs: "bppk",   felirat: "Budapest + Paks",              sorozatok: ["bp", "pk"] },
-      { kulcs: "kuszob", felirat: "Paks küszöb (felvíz + alvíz)", sorozatok: ["fv", "av"] },
-      { kulcs: "mind",   felirat: "Mind a négy",                  sorozatok: ["bp", "pk", "fv", "av"] }
+      { kulcs: "bppk",   felirat: "Budapest + Paks (óránkénti)",      halmaz: "oras", sorozatok: ["bp", "pk"] },
+      { kulcs: "paks15", felirat: "Paksi mérők (15 perces)",          halmaz: "p15",  sorozatok: ["pk15", "cs", "fv", "av"] },
+      { kulcs: "kuszob", felirat: "Küszöb: felvíz + alvíz (15 perc)", halmaz: "p15",  sorozatok: ["fv", "av"] }
     ];
     let aktivCsoport = "bppk";
 
     function sorozat(kulcs) { return SOROZATOK.find(function (s) { return s.kulcs === kulcs; }); }
+    function halmazAdat(kulcs) { return ADAT[kulcs]; }
 
     // ==================================================================
     // 1. ADATOK BETOLTESE ES FELDOLGOZASA
     // ==================================================================
 
-    let osszesCimke = [];
-    let osszesAdat = {};            // kulcs -> ertekek tombje (null = nincs adat)
-    SOROZATOK.forEach(function (s) { osszesAdat[s.kulcs] = []; });
+    // ADAT[halmazKulcs] = { cimkek: [...], ertekek: { sorozatKulcs: [...] }, hiba: "" }
+    const ADAT = {};
+    ADATHALMAZOK.forEach(function (h) {
+      ADAT[h.kulcs] = { cimkek: [], ertekek: {}, hiba: "" };
+      Object.keys(h.oszlopok).forEach(function (k) { ADAT[h.kulcs].ertekek[k] = []; });
+    });
 
     let chart = null;       // "egy grafikon" nezet
     let chartMax = null;    // "ket panel" nezet - felso (max)
     let chartMin = null;    // "ket panel" nezet - also (min)
     let chartDelta = null;  // a delta kulon grafikonja (mindig latszik)
 
-    const adatUrl = ADATFAJL + "?t=" + Date.now();   // a ?t=... megakadalyozza a gyorsitotarazast
-
-    fetch(adatUrl)
-      .then(function (valasz) {
-        if (!valasz.ok) {
-          throw new Error("A " + ADATFAJL + " nem erheto el (HTTP " + valasz.status + ")");
-        }
-        return valasz.text();
-      })
-      .then(function (szoveg) {
-        const sorok = szoveg.split("\n").map(function (s) { return s.trim(); }).filter(Boolean);
-
-        sorok.forEach(function (sor) {
-          const reszek = sor.split(";");
-          if (reszek.length < 3) return;      // ervenytelen sor
-
-          osszesCimke.push(reszek[0].trim());
-
-          // Minden sorozat: ha az oszlop hianyzik (regi, 3 oszlopos sor),
-          // vagy "NA"/ures, akkor null.
-          SOROZATOK.forEach(function (s) {
-            const nyers = (reszek[s.oszlop] === undefined) ? "NA" : reszek[s.oszlop].trim();
-            osszesAdat[s.kulcs].push(nyers === "NA" || nyers === "" ? null : Number(nyers));
+    // Egy adatfajl betoltese. Ha a fajl nem erheto el (pl. a 15 perces fajl
+    // meg nem letezik), az az adathalmaz ures marad, a masik attol meg mukodik.
+    function halmazBetoltes(h) {
+      const url = h.fajl + "?t=" + Date.now();   // a ?t=... megakadalyozza a gyorsitotarazast
+      return fetch(url)
+        .then(function (valasz) {
+          if (!valasz.ok) { throw new Error(h.fajl + " nem elerheto (HTTP " + valasz.status + ")"); }
+          return valasz.text();
+        })
+        .then(function (szoveg) {
+          const sorok = szoveg.split("\n").map(function (s) { return s.trim(); }).filter(Boolean);
+          sorok.forEach(function (sor) {
+            const reszek = sor.split(";");
+            if (reszek.length < 2) return;          // ervenytelen sor
+            ADAT[h.kulcs].cimkek.push(reszek[0].trim());
+            Object.keys(h.oszlopok).forEach(function (k) {
+              const nyers = (reszek[h.oszlopok[k]] === undefined) ? "NA" : reszek[h.oszlopok[k]].trim();
+              ADAT[h.kulcs].ertekek[k].push(nyers === "NA" || nyers === "" ? null : Number(nyers));
+            });
           });
-        });
+        })
+        .catch(function (hiba) { ADAT[h.kulcs].hiba = hiba.message; });
+    }
 
-        gombokFelepitese();
-        chartFelepites();
-      })
-      .catch(function (hiba) {
-        document.getElementById("info").textContent =
-          "Hiba történt az adatok betöltésekor: " + hiba.message;
-      });
+    Promise.all(ADATHALMAZOK.map(halmazBetoltes)).then(function () {
+      gombokFelepitese();
+      chartFelepites();
+    });
 
 
     // ==================================================================
@@ -286,16 +297,21 @@
     const ALAP_IDOSZAK = MOBIL ? "7d" : "30d";
     let aktivIdoszak = ALAP_IDOSZAK;
 
-    // Visszaadja a kivalasztott idoszak cimkeit es MINDEN sorozat ertekeit.
-    function idoszakSzures() {
+    // Egy adathalmaz kivalasztott idoszakra szurt valtozata. Az idoszak
+    // ORAKBAN van megadva; az adathalmaz felbontasa szerint szamoljuk at
+    // sorokra (60 perces adatnal 24 ora = 24 sor, 15 percesnel 96 sor).
+    function idoszakSzures(halmazKulcs) {
+      const h = ADATHALMAZOK.find(function (x) { return x.kulcs === halmazKulcs; });
+      const a = ADAT[halmazKulcs];
       const idoszak = IDOSZAKOK.find(function (i) { return i.kulcs === aktivIdoszak; });
       let kezdet = 0;
       if (idoszak && idoszak.orak !== null) {
-        kezdet = osszesCimke.length - Math.min(osszesCimke.length, idoszak.orak);
+        const sorok = idoszak.orak * (60 / h.lepesPerc);
+        kezdet = a.cimkek.length - Math.min(a.cimkek.length, sorok);
       }
-      const adat = {};
-      SOROZATOK.forEach(function (s) { adat[s.kulcs] = osszesAdat[s.kulcs].slice(kezdet); });
-      return { cimkek: osszesCimke.slice(kezdet), adat: adat };
+      const ertekek = {};
+      Object.keys(a.ertekek).forEach(function (k) { ertekek[k] = a.ertekek[k].slice(kezdet); });
+      return { cimkek: a.cimkek.slice(kezdet), ertekek: ertekek };
     }
 
 
@@ -304,7 +320,7 @@
     // ==================================================================
 
     const BONTASOK = [
-      { kulcs: "nyers", felirat: "Óránkénti (nyers)" },
+      { kulcs: "nyers", felirat: "Nyers (óránkénti / 15 perces)" },
       { kulcs: "napi",  felirat: "Napi min-max" },
       { kulcs: "heti",  felirat: "Heti min-max" },
       { kulcs: "havi",  felirat: "Havi min-max" },
@@ -343,9 +359,9 @@
       return null;
     }
 
-    // Minden sorozatra kiszamolja a csoportonkenti minimumot es maximumot.
-    // Eredmeny: { cimkek: [...], min: {kulcs: [...]}, max: {kulcs: [...]} }
-    function aggregalasMinMax(cimkek, adat, bontas) {
+    // A megadott sorozat-kulcsokra kiszamolja a csoportonkenti minimumot es
+    // maximumot. Eredmeny: { cimkek: [...], min: {kulcs: [...]}, max: {kulcs: [...]} }
+    function aggregalasMinMax(cimkek, ertekek, bontas, kulcsok) {
       const sorrend = [];
       const terkep = new Map();
 
@@ -356,25 +372,25 @@
 
         if (!terkep.has(kulcs)) {
           const g = { min: {}, max: {} };
-          SOROZATOK.forEach(function (s) { g.min[s.kulcs] = null; g.max[s.kulcs] = null; });
+          kulcsok.forEach(function (k) { g.min[k] = null; g.max[k] = null; });
           terkep.set(kulcs, g);
           sorrend.push(kulcs);
         }
         const g = terkep.get(kulcs);
 
-        SOROZATOK.forEach(function (s) {
-          const v = adat[s.kulcs][i];
+        kulcsok.forEach(function (k) {
+          const v = ertekek[k][i];
           if (v !== null && v !== undefined) {
-            g.min[s.kulcs] = (g.min[s.kulcs] === null) ? v : Math.min(g.min[s.kulcs], v);
-            g.max[s.kulcs] = (g.max[s.kulcs] === null) ? v : Math.max(g.max[s.kulcs], v);
+            g.min[k] = (g.min[k] === null) ? v : Math.min(g.min[k], v);
+            g.max[k] = (g.max[k] === null) ? v : Math.max(g.max[k], v);
           }
         });
       });
 
       const eredmeny = { cimkek: sorrend, min: {}, max: {} };
-      SOROZATOK.forEach(function (s) {
-        eredmeny.min[s.kulcs] = sorrend.map(function (k) { return terkep.get(k).min[s.kulcs]; });
-        eredmeny.max[s.kulcs] = sorrend.map(function (k) { return terkep.get(k).max[s.kulcs]; });
+      kulcsok.forEach(function (k) {
+        eredmeny.min[k] = sorrend.map(function (c) { return terkep.get(c).min[k]; });
+        eredmeny.max[k] = sorrend.map(function (c) { return terkep.get(c).max[k]; });
       });
       return eredmeny;
     }
@@ -427,7 +443,7 @@
 
     function bontasValasztas(kulcs) {
       aktivBontas = kulcs;
-      // Nyers (orankenti) nezetben egy evnyi adat tul sok pont lenne;
+      // Nyers nezetben egy evnyi (vagy teljes) adat tul sok pont lenne;
       // min-max bontasnal a 24 ora / 7 nap keves. Ezert automatikusan atvaltunk.
       if (kulcs === "nyers" && (aktivIdoszak === "all" || aktivIdoszak === "1y")) {
         aktivIdoszak = ALAP_IDOSZAK;
@@ -488,13 +504,13 @@
       };
     }
 
-    function aktivSorozatok() {
-      const cs = ALLOMASCSOPORTOK.find(function (c) { return c.kulcs === aktivCsoport; });
-      return cs.sorozatok.map(sorozat);
+    function aktivCsoportAdat() {
+      return ALLOMASCSOPORTOK.find(function (c) { return c.kulcs === aktivCsoport; });
     }
 
     function chartFelepites() {
-      const szurt = idoszakSzures();
+      const cs = aktivCsoportAdat();
+      const szurt = idoszakSzures(cs.halmaz);
       const ketPanel = (aktivBontas !== "nyers" && aktivNezet === "ketto");
 
       document.getElementById("chart-box-egy").style.display   = ketPanel ? "none" : "block";
@@ -502,33 +518,39 @@
 
       if (ketPanel) {
         if (chart) { chart.destroy(); chart = null; }
-        ketPanelRajzolasa(szurt);
+        ketPanelRajzolasa(szurt, cs);
       } else {
         if (chartMax) { chartMax.destroy(); chartMax = null; }
         if (chartMin) { chartMin.destroy(); chartMin = null; }
-        egyGrafikonRajzolasa(szurt);
+        egyGrafikonRajzolasa(szurt, cs);
       }
-      deltaGrafikonRajzolasa(szurt);
+      deltaGrafikonRajzolasa(idoszakSzures("p15"));
     }
 
+    // Az info-sor: pontok szama, legfrissebb idopont, es ha egy adatfajl
+    // nem tolthetо be, ennek jelzese.
     function infoSzoveg(cimkek) {
-      document.getElementById("info").textContent =
-        (MOBIL ? "Pontok száma: " : "Betöltött pontok száma: ") + cimkek.length +
+      let szoveg = (MOBIL ? "Pontok száma: " : "Betöltött pontok száma: ") + cimkek.length +
         (cimkek.length > 0 ? " | Legfrissebb: " + cimkek[cimkek.length - 1] : "");
+      ADATHALMAZOK.forEach(function (h) {
+        if (ADAT[h.kulcs].hiba) { szoveg += " | Hiba: " + ADAT[h.kulcs].hiba; }
+      });
+      document.getElementById("info").textContent = szoveg;
     }
 
-    function egyGrafikonRajzolasa(szurt) {
+    function egyGrafikonRajzolasa(szurt, cs) {
       let cimkek, datasets = [];
+      const sorozatok = cs.sorozatok.map(sorozat);
 
       if (aktivBontas === "nyers") {
         cimkek = szurt.cimkek;
-        aktivSorozatok().forEach(function (s) {
-          datasets.push(vonal(s.felirat + " (cm)", szurt.adat[s.kulcs], s.szin, false, false));
+        sorozatok.forEach(function (s) {
+          datasets.push(vonal(s.felirat + " (cm)", szurt.ertekek[s.kulcs], s.szin, false, false));
         });
       } else {
-        const agg = aggregalasMinMax(szurt.cimkek, szurt.adat, aktivBontas);
+        const agg = aggregalasMinMax(szurt.cimkek, szurt.ertekek, aktivBontas, cs.sorozatok);
         cimkek = agg.cimkek;
-        aktivSorozatok().forEach(function (s) {
+        sorozatok.forEach(function (s) {
           datasets.push(vonal(s.felirat + " max", agg.max[s.kulcs], s.szin, false, true));
           datasets.push(vonal(s.felirat + " min", agg.min[s.kulcs], s.szin, true, true));
         });
@@ -543,14 +565,15 @@
       infoSzoveg(cimkek);
     }
 
-    function ketPanelRajzolasa(szurt) {
-      const agg = aggregalasMinMax(szurt.cimkek, szurt.adat, aktivBontas);
+    function ketPanelRajzolasa(szurt, cs) {
+      const agg = aggregalasMinMax(szurt.cimkek, szurt.ertekek, aktivBontas, cs.sorozatok);
+      const sorozatok = cs.sorozatok.map(sorozat);
 
       if (chartMax) { chartMax.destroy(); chartMax = null; }
       if (chartMin) { chartMin.destroy(); chartMin = null; }
 
-      const maxVonalak = aktivSorozatok().map(function (s) { return vonal(s.felirat + " max", agg.max[s.kulcs], s.szin, false, true); });
-      const minVonalak = aktivSorozatok().map(function (s) { return vonal(s.felirat + " min", agg.min[s.kulcs], s.szin, false, true); });
+      const maxVonalak = sorozatok.map(function (s) { return vonal(s.felirat + " max", agg.max[s.kulcs], s.szin, false, true); });
+      const minVonalak = sorozatok.map(function (s) { return vonal(s.felirat + " min", agg.min[s.kulcs], s.szin, false, true); });
 
       chartMax = new Chart(document.getElementById("chart-max").getContext("2d"), {
         type: "line", data: { labels: agg.cimkek, datasets: maxVonalak }, options: chartBeallitasok(MOBIL ? 6 : 12)
@@ -562,16 +585,17 @@
     }
 
     // A DELTA (felvíz - alvíz) kulon grafikonja: mindig latszik a fo grafikon
-    // alatt. Nyers bontasnal egy vonal, min-max bontasnal max + min vonal.
+    // alatt, MINDIG a 15 perces adathalmazbol. Nyers bontasnal egy vonal,
+    // min-max bontasnal max + min vonal.
     function deltaGrafikonRajzolasa(szurt) {
       const s = sorozat("dl");
       let cimkek, datasets;
 
       if (aktivBontas === "nyers") {
         cimkek = szurt.cimkek;
-        datasets = [vonal(s.felirat + " (cm)", szurt.adat.dl, s.szin, false, false)];
+        datasets = [vonal(s.felirat + " (cm)", szurt.ertekek.dl, s.szin, false, false)];
       } else {
-        const agg = aggregalasMinMax(szurt.cimkek, szurt.adat, aktivBontas);
+        const agg = aggregalasMinMax(szurt.cimkek, szurt.ertekek, aktivBontas, ["dl"]);
         cimkek = agg.cimkek;
         datasets = [
           vonal("Delta max", agg.max.dl, s.szin, false, true),
