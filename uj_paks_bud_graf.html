@@ -299,7 +299,8 @@
 
     // Egy adathalmaz kivalasztott idoszakra szurt valtozata. Az idoszak
     // ORAKBAN van megadva; az adathalmaz felbontasa szerint szamoljuk at
-    // sorokra (60 perces adatnal 24 ora = 24 sor, 15 percesnel 96 sor).
+    // sorokra (60 perces adatnal 24 ora = 24 sor, 15 percesnel 96 sor
+    // Modositas_2026-11-22: Elozosorokra bontas modositva idobontasra, mivel az orakozi idok csokkentik a sorokat).
      function idoszakSzures(halmazKulcs) {
   const a = ADAT[halmazKulcs];
   const idoszak = IDOSZAKOK.find(function (i) { return i.kulcs === aktivIdoszak; });
