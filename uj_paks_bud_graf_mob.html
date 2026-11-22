@@ -286,19 +286,55 @@
     // ORAKBAN van megadva; az adathalmaz felbontasa szerint szamoljuk at
     // sorokra (60 perces adatnal 24 ora = 24 sor, 15 percesnel 96 sor).
     function idoszakSzures(halmazKulcs) {
-      const h = ADATHALMAZOK.find(function (x) { return x.kulcs === halmazKulcs; });
-      const a = ADAT[halmazKulcs];
-      const idoszak = IDOSZAKOK.find(function (i) { return i.kulcs === aktivIdoszak; });
-      let kezdet = 0;
-      if (idoszak && idoszak.orak !== null) {
-        const sorok = idoszak.orak * (60 / h.lepesPerc);
-        kezdet = a.cimkek.length - Math.min(a.cimkek.length, sorok);
-      }
-      const ertekek = {};
-      Object.keys(a.ertekek).forEach(function (k) { ertekek[k] = a.ertekek[k].slice(kezdet); });
-      return { cimkek: a.cimkek.slice(kezdet), ertekek: ertekek };
-    }
+  const a = ADAT[halmazKulcs];
+  const idoszak = IDOSZAKOK.find(function (i) { return i.kulcs === aktivIdoszak; });
 
+  // Ha "Teljes" van kiválasztva, vagy nincs adat → mindent visszaadunk
+  if (!idoszak || idoszak.orak === null || a.cimkek.length === 0) {
+    return { cimkek: a.cimkek.slice(), ertekek: Object.fromEntries(
+      Object.keys(a.ertekek).map(k => [k, a.ertekek[k].slice()])
+    )};
+  }
+
+  // Legfrissebb időpont feldolgozása
+  const utolsoCimke = a.cimkek[a.cimkek.length - 1];
+  const utolsoInfo = idopontFeldolgozas(utolsoCimke);
+  if (!utolsoInfo) {
+    // Ha valamiért nem sikerül parse-olni, visszaesünk a régi módszerre
+    const h = ADATHALMAZOK.find(x => x.kulcs === halmazKulcs);
+    const sorok = idoszak.orak * (60 / h.lepesPerc);
+    const kezdet = a.cimkek.length - Math.min(a.cimkek.length, sorok);
+    return {
+      cimkek: a.cimkek.slice(kezdet),
+      ertekek: Object.fromEntries(
+        Object.keys(a.ertekek).map(k => [k, a.ertekek[k].slice(kezdet)])
+      )
+    };
+  }
+
+  // Kívánt kezdő időpont kiszámítása (milliszekundumban)
+  const utolsoDatum = new Date(utolsoInfo.y, utolsoInfo.mo - 1, utolsoInfo.d, utolsoInfo.h, utolsoInfo.mi);
+  const kezdoDatum = new Date(utolsoDatum.getTime() - idoszak.orak * 60 * 60 * 1000);
+
+  // Megkeressük az első olyan indexet, ami még belefér az időszakba
+  let kezdet = 0;
+  for (let i = 0; i < a.cimkek.length; i++) {
+    const info = idopontFeldolgozas(a.cimkek[i]);
+    if (!info) continue;
+    const d = new Date(info.y, info.mo - 1, info.d, info.h, info.mi);
+    if (d >= kezdoDatum) {
+      kezdet = i;
+      break;
+    }
+  }
+
+  const ertekek = {};
+  Object.keys(a.ertekek).forEach(function (k) {
+    ertekek[k] = a.ertekek[k].slice(kezdet);
+  });
+
+  return { cimkek: a.cimkek.slice(kezdet), ertekek: ertekek };
+}
 
     // ==================================================================
     // 3. BONTAS (aggregalas): napi / heti / havi / eves min-max
